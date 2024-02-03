@@ -61,6 +61,7 @@ void SystemClock_Config(void);
   * @retval int
   */
 int main(void) {
+uint32_t debouncer = 0;
 HAL_Init(); // Reset of all peripherals, init the Flash and Systick
 //SystemClock_Config(); //Configure the system clock
 /* This example uses HAL library calls to control
@@ -75,8 +76,8 @@ with hardware register access. */
 //HAL_GPIO_Init(GPIOC, &initStr); // Initialize pins PC8 & PC9
 //HAL_GPIO_WritePin(GPIOC, GPIO_PIN_8, GPIO_PIN_SET); // Start PC8 high
 	
-	//Enable the GPIOC clock in the RCC
-	RCC->AHBENR |= (1<<19);
+	// Enable the GPIOC and GPIOA clock in the RCC
+	RCC->AHBENR |= (1<<19) | (1<<17);
 	
 	
 	//Setting Moder for PC6 and PC7
@@ -99,16 +100,44 @@ with hardware register access. */
 	GPIOC->PUPDR |= ((0 << 12) | (0 << 13));
 	GPIOC->PUPDR |= ((0 << 14) | (0 << 15));
 	
+	
+	// Setting for PA0 user button
+	
+	// Setting Moder for PA0
+	GPIOA->MODER |= (0 << 0);
+	GPIOA->MODER |= (0<< 1);
+	
+	// Setting OSPEEDR for PA0
+	GPIOA->OSPEEDR |= (1 << 1);
+	GPIOA->OSPEEDR |= (0 << 0);
+	
+	// Setting PUPDR for PA0
+	GPIOA->PUPDR |= (1 << 1);
+	GPIOA->PUPDR |= (0 << 0);
+
+	
 	//// Start PC6 high
 	GPIOC->ODR |= (1<<6);
   GPIOC->ODR |= (0<<7);
 while (1) {
-HAL_Delay(200); // Delay 200ms
-	
+	debouncer = (debouncer << 1);
+if(GPIOA->IDR & 0x01)
+{
+	debouncer |= 0x01;
+}
+if (debouncer == 0xFFFFFFFF) {
+// This code triggers repeatedly when button is steady high!
+}
+if (debouncer == 0x00000000) {
+
+// This code triggers repeatedly when button is steady low!
+}
+if (debouncer == 0x7FFFFFFF) {
 	GPIOC->ODR ^= 0b001000000;
 	GPIOC->ODR ^= 0b010000000;
-// Toggle the output state of both PC8 and PC9
-//HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_8 | GPIO_PIN_9);
+	HAL_Delay(3);
+// This code triggers only once when transitioning to steady high!
+}
 }
 }
 
