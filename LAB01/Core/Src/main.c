@@ -62,22 +62,53 @@ void SystemClock_Config(void);
   */
 int main(void) {
 HAL_Init(); // Reset of all peripherals, init the Flash and Systick
-SystemClock_Config(); //Configure the system clock
+//SystemClock_Config(); //Configure the system clock
 /* This example uses HAL library calls to control
 the GPIOC peripheral. You’ll be redoing this code
 with hardware register access. */
-__HAL_RCC_GPIOC_CLK_ENABLE(); // Enable the GPIOC clock in the RCC
+//__HAL_RCC_GPIOC_CLK_ENABLE(); // Enable the GPIOC clock in the RCC
 // Set up a configuration struct to pass to the initialization function
-GPIO_InitTypeDef initStr = {GPIO_PIN_8 | GPIO_PIN_9,
-GPIO_MODE_OUTPUT_PP,
-GPIO_SPEED_FREQ_LOW,
-GPIO_NOPULL};
-HAL_GPIO_Init(GPIOC, &initStr); // Initialize pins PC8 & PC9
-HAL_GPIO_WritePin(GPIOC, GPIO_PIN_8, GPIO_PIN_SET); // Start PC8 high
+//GPIO_InitTypeDef initStr = {GPIO_PIN_8 | GPIO_PIN_9,
+//GPIO_MODE_OUTPUT_PP,
+//GPIO_SPEED_FREQ_LOW,
+//GPIO_NOPULL};
+//HAL_GPIO_Init(GPIOC, &initStr); // Initialize pins PC8 & PC9
+//HAL_GPIO_WritePin(GPIOC, GPIO_PIN_8, GPIO_PIN_SET); // Start PC8 high
+	
+	//Enable the GPIOC clock in the RCC
+	RCC->AHBENR |= (1<<19);
+	
+	
+	//Setting Moder for PC6 and PC7
+	GPIOC->MODER |= (1 << 12);
+	GPIOC->MODER |= (0 << 13);
+	GPIOC->MODER |= (1 << 14);
+	GPIOC->MODER |= (0 << 15);
+	
+	// Setting OTYPE for PC6 and PC7
+	GPIOC->OTYPER |= (0<<6);
+	GPIOC->OTYPER |= (0<<7);
+	
+	// Setting OSPEEDR for PC6 and PC7
+	GPIOC->OSPEEDR |= (1<<13);
+	GPIOC->OSPEEDR |= (0<<12);
+	GPIOC->OSPEEDR |= (1<<15);
+	GPIOC->OSPEEDR |= (0<<14);
+	
+	// Setting PUPDR for PC6 and PC7
+	GPIOC->PUPDR |= ((0 << 12) | (0 << 13));
+	GPIOC->PUPDR |= ((0 << 14) | (0 << 15));
+	
+	//// Start PC6 high
+	GPIOC->ODR |= (1<<6);
+  GPIOC->ODR |= (0<<7);
 while (1) {
 HAL_Delay(200); // Delay 200ms
+	
+	GPIOC->ODR ^= 0b001000000;
+	GPIOC->ODR ^= 0b010000000;
 // Toggle the output state of both PC8 and PC9
-HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_8 | GPIO_PIN_9);
+//HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_8 | GPIO_PIN_9);
 }
 }
 
