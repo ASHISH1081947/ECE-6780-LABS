@@ -66,7 +66,7 @@
 /**
   * @brief This function handles Non maskable interrupt.
   */
-	
+volatile uint32_t interrupt_count =0;
 void NMI_Handler(void)
 {
   /* USER CODE BEGIN NonMaskableInt_IRQn 0 */
@@ -125,6 +125,12 @@ void PendSV_Handler(void)
   */
 void SysTick_Handler(void)
 {
+	// Toggle blue PC7 every 200ms
+      interrupt_count++;
+      if (interrupt_count == 200) {
+            GPIOC->ODR ^= GPIO_ODR_7;
+            interrupt_count = 0;
+      }
 
   /* USER CODE BEGIN SysTick_IRQn 0 */
 

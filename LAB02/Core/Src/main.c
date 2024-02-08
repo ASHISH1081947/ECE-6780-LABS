@@ -64,22 +64,81 @@ int main(void)
 {
 	HAL_Init();
 	// Enable the GPIOC clock in the RCC
+	RCC->AHBENR |= RCC_AHBENR_GPIOCEN;
+	// Enable the GPIOA clock in the RCC
+	RCC->AHBENR |= RCC_AHBENR_GPIOAEN;
 	
+	// SET MODER register
+	GPIOC->MODER |= (1<<12); // PC6
+	GPIOC->MODER |= (1<<14); // PC7
+  GPIOC->MODER |= (1<<16); // PC8
+	GPIOC->MODER |= (1<<18); // PC9
+	
+	// Set OTYPER register
+	GPIOC->OTYPER |= (0<<6); // PC6
+	GPIOC->OTYPER |= (0<<7); // PC7
+	GPIOC->OTYPER |= (0<<8); // PC8
+	GPIOC->OTYPER |= (0<<9); // PC9
+	
+		// Set OSPEEDR register
+	GPIOC->OSPEEDR |= (0<<12); // PC6
+	GPIOC->OSPEEDR |= (0<<14); // PC7
+	GPIOC->OSPEEDR |= (0<<16); // PC8
+	GPIOC->OSPEEDR |= (0<<18); // PC9
+	
+		// Set PUPDR register
+	GPIOC->PUPDR |= ((0<<12) | (0<<13)); // PC6
+	GPIOC->PUPDR |= ((0<<14) | (0<<15)); // PC7
+	GPIOC->PUPDR |= ((0<<16) | (0<<17)); // PC8
+	GPIOC->PUPDR |= ((0<<18) | (0<<19)); // PC9
+
+// Set green PC9 high
+	GPIOC->ODR |= GPIO_ODR_9; // PC9 (green) high
+// Set pins for push-button to input mode in MODER register
+	GPIOA->MODER &= ~(3);
+	
+	// Set pins to low speed in OSPEEDR register
+	GPIOA->OSPEEDR &= ~(3);
+	
+	// Enable pull-down resistor in PUPDR register
+	GPIOA->PUPDR |= (2);	
 /* Configure the system clock */
   SystemClock_Config();
+// Setting mask (enabled/unmask) bit in EXTI_IMR register
+	EXTI->IMR = 0x0001;
+	// Setting EXTI input line 0 to have rising-edge trigger
+	EXTI->RTSR = 0x0001;
+	
+	// Use RCC to enable the peripheral clock to the SYSCFG peripheral
+	RCC->APB2ENR |= RCC_APB2ENR_SYSCFGEN;
+	
+	// Configure multiplexer to route PA0 (user button) to the EXTI input line 0 (EXTI0)
+	SYSCFG->EXTICR[0] |= SYSCFG_EXTICR1_EXTI0_PA;
+	
+	// Enable EXTI0_1_IRQn for EXTI line 0 interrupt by passing defined name to NVIC_EnableIRQ()
+	NVIC_EnableIRQ(EXTI0_1_IRQn);
+	
+	// Setting interrupt to 1 (high-priority)
+	NVIC_SetPriority(EXTI0_1_IRQn, 1);
 
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-
+    HAL_Delay(450); // Delay 450ms
+		GPIOC->ODR ^= GPIO_ODR_6;
 
   }
   /* USER CODE END 3 */
 }
 
-
+void EXTI0_1_IRQHandler(void) {
+	// Toggle green and orange LEDs
+	GPIOC->ODR ^= GPIO_ODR_8 | GPIO_ODR_9;
+	// Clear flag for input line 0 in the EXTI pending register
+	EXTI->PR |= EXTI_PR_PR0;
+}
 
 
 /**
