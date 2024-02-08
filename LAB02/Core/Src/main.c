@@ -119,9 +119,9 @@ int main(void)
 	NVIC_EnableIRQ(EXTI0_1_IRQn);
 	
 	// Setting interrupt to 1 (high-priority)
-	NVIC_SetPriority(EXTI0_1_IRQn, 1);
+	NVIC_SetPriority(EXTI0_1_IRQn, 2);
 
-
+NVIC_SetPriority(SysTick_IRQn, 1);
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
@@ -132,8 +132,11 @@ int main(void)
   }
   /* USER CODE END 3 */
 }
-
+volatile uint32_t i;
 void EXTI0_1_IRQHandler(void) {
+	GPIOC->ODR ^= GPIO_ODR_8 | GPIO_ODR_9;
+	for(i=0; i<1500000;i++)
+	{}
 	// Toggle green and orange LEDs
 	GPIOC->ODR ^= GPIO_ODR_8 | GPIO_ODR_9;
 	// Clear flag for input line 0 in the EXTI pending register
