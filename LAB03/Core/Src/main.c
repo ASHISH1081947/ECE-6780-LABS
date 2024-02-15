@@ -60,45 +60,81 @@ void SystemClock_Config(void);
   * @brief  The application entry point.
   * @retval int
   */
-int main(void)
-{
-  /* USER CODE BEGIN 1 */
+int main(void) {
 
-  /* USER CODE END 1 */
+    // Initialize the system
+    HAL_Init();
+__HAL_RCC_GPIOC_CLK_ENABLE();
+    // Enable GPIOC and GPIOA clocks
+    RCC->AHBENR |= RCC_AHBENR_GPIOCEN | RCC_AHBENR_GPIOAEN;
+  	// Enable the SYSCFG clock
+    RCC->APB2ENR |= RCC_APB2ENR_SYSCFGEN;
+  	// Enable TIM2 clock
+    RCC->APB1ENR |= RCC_APB1ENR_TIM2EN;
+	  // Enable TIM3 clock
+    RCC->APB1ENR |= RCC_APB1ENR_TIM3EN;
+	  
+	  // Configure TIM2 to generate an interrupt at 4 Hz
+    TIM2->PSC = 7999;  // Prescaler, results in a timer clock of 4 kHz (8000000 Hz / (7999 + 1))
+    TIM2->ARR = 250;   // Auto-reload value, results in an interrupt every 250 ms (1000 / 4 Hz )
 
-  /* MCU Configuration--------------------------------------------------------*/
+	  TIM2->DIER  |= TIM_DIER_UIE; 
+  
+  	TIM2->CR1  |= TIM_CR1_CEN; 
+		GPIOC->ODR |=(1<<8);
+	  NVIC_EnableIRQ(TIM2_IRQn);
+		
+		
+    // Configure PC6,PC7,PC8 and PC9 as output
+   GPIO_InitTypeDef initc89 = {GPIO_PIN_8 | GPIO_PIN_9, GPIO_MODE_OUTPUT_PP, GPIO_SPEED_FREQ_LOW,GPIO_NOPULL};
+	 HAL_GPIO_Init(GPIOC, &initc89);
 
-  /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
-  HAL_Init();
+    
 
-  /* USER CODE BEGIN Init */
+    // 2. Configure GPIO pins for TIM3 CH1 and CH2 as alternate function (AF1 for STM32F0)
+		GPIO_InitTypeDef initc67 = {GPIO_PIN_6 | GPIO_PIN_7, GPIO_MODE_AF_PP, GPIO_SPEED_FREQ_LOW,GPIO_NOPULL};
 
-  /* USER CODE END Init */
+		HAL_GPIO_Init(GPIOC, &initc67);
+    GPIOC->AFR[0] = 0; // Set AF1 for PA6 and PA7 for TIM3 CH1 and CH2
+    // 3. Configure TIM3 for PWM
+    TIM3->PSC = 7; // Set prescaler to achieve a clock frequency that allows a UEV period of 800 Hz
+    TIM3->ARR = 1250; // Set auto-reload value to get a PWM frequency of 800 Hz
+		TIM3->CCMR1 &= ~(TIM_CCMR1_CC1S);
+		TIM3->CCMR1 &= ~(TIM_CCMR1_CC2S);
+		TIM3->CCMR1 |= (TIM_CCMR1_OC1M_0 | TIM_CCMR1_OC1M_1 | TIM_CCMR1_OC1M_2 );
+		TIM3->CCMR1 |= (TIM_CCMR1_OC2M_1 | TIM_CCMR1_OC2M_2 );
+    // 4. Configure output channels for PWM mode
+    //TIM3->CCMR1 = 0;
+    TIM3->CCMR1 |= TIM_CCMR1_OC1PE ; // Enable preload and set OC1M to PWM mode 2 for CH1
+    TIM3->CCMR1 |= TIM_CCMR1_OC2PE; // Enable preload and set OC2M to PWM mode 1 for CH2
 
-  /* Configure the system clock */
-  SystemClock_Config();
+    // 5. Enable output channels
+    TIM3->CCER |= TIM_CCER_CC1E ;
+		TIM3->CCER |= TIM_CCER_CC2E;
 
-  /* USER CODE BEGIN SysInit */
+    // 6. Set duty cycle (e.g., 20% of ARR)
+    TIM3->CCR1 = 1150; // 20% duty cycle for CH1
+    TIM3->CCR2 = 250; // 20% duty cycle for CH2
 
-  /* USER CODE END SysInit */
+    // 7. Enable TIM3 counter
+    TIM3->CR1 |= TIM_CR1_CEN;
 
-  /* Initialize all configured peripherals */
-  /* USER CODE BEGIN 2 */
 
-  /* USER CODE END 2 */
 
-  /* Infinite loop */
-  /* USER CODE BEGIN WHILE */
-  while (1)
-  {
-    /* USER CODE END WHILE */
+    while (1) 
+			{
+      }
+		}
 
-    /* USER CODE BEGIN 3 */
-  }
-  /* USER CODE END 3 */
-}
-
+		void TIM2_IRQHandler(void)
+		{
+			 if (TIM2->SR & TIM_SR_UIF) { // Check update interrupt flag // Check update interrupt flag
+        GPIOC->ODR ^= (1 << 8) | (1 << 9); // Toggle green (PC8) and orange (PC9) LEDs
+        TIM2->SR &= ~TIM_SR_UIF; // Clear update interrupt flag
+			 }
+		}
 /**
+		
   * @brief System Clock Configuration
   * @retval None
   */
