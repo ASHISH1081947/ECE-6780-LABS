@@ -60,7 +60,6 @@ void SystemClock_Config(void);
   * @brief  The application entry point.
   * @retval int
   */
-	
 	// Function to read a character from USART3
 char USART3_ReadChar(void) {
     while (!(USART3->ISR & USART_ISR_RXNE));  // Wait for RXNE (Receive data register not empty)
@@ -118,7 +117,7 @@ int main(void)
 
     // Set alternate function to USART3 (AF1 for PC4 and PC5 on STM32F072)
     GPIOC->AFR[0] &= ~(GPIO_AFRL_AFRL4 | GPIO_AFRL_AFRL5);
-    GPIOC->AFR[0] |= (1 << (4 * 4)) | (1 << (5 * 4));
+    GPIOC->AFR[0] |= (1 << (16)) | (1 << (20));
 
     // Configure USART3
     // Assuming 8N1 format, baud rate = 9600, clock = 8MHz
@@ -156,6 +155,8 @@ int main(void)
   }
   /* USER CODE END 3 */
 }
+
+
 
 /**
   * @brief System Clock Configuration
