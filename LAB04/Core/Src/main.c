@@ -120,30 +120,69 @@ int main(void)
     GPIOC->AFR[0] |= (1 << (16)) | (1 << (20));
 
     // Configure USART3
-    // Assuming 8N1 format, baud rate = 9600, clock = 8MHz
-    USART3->BRR = 8000000 / 9600;
+    // Assuming 8N1 format, baud rate = 115200, clock = 8MHz
+    USART3->BRR = 8000000 / 115200;
     USART3->CR1 = USART_CR1_TE | USART_CR1_RE; // Enable TX and RX
     USART3->CR1 |= USART_CR1_UE; // Enable USART3
 		   GPIO_InitTypeDef initc6789 = {GPIO_PIN_8 | GPIO_PIN_9|GPIO_PIN_6|GPIO_PIN_7, GPIO_MODE_OUTPUT_PP, GPIO_SPEED_FREQ_LOW,GPIO_NOPULL};
 	 HAL_GPIO_Init(GPIOC, &initc6789);
 		
   while (1)
-  {
+  { int c=0;
+		USART3_SendString("\n Color Command?\n");
 		char ch = USART3_ReadChar();  // Read a character from USART3
-		        // Process the received character
+		USART3_SendString("Action?\n");
+		char action = USART3_ReadChar();// Process the received character
         switch (ch) {
 					  case 'R':
-                GPIOC->ODR ^= GPIO_ODR_6;// Toggle RED LED
+							switch (action){
+								case '0':
+									GPIOC->BSRR |= GPIO_PIN_6 << 16;break;
+								case '1':
+									GPIOC->BSRR |= GPIO_PIN_6;break;
+								case '2':
+                  while(c<10){GPIOC->ODR ^= GPIO_ODR_6;HAL_Delay(200);c++;}// Toggle RED LED
                 break;
+								default:
+						   	USART3_SendString("Error: Unrecognized action\n");break;
+							}break;
 						case 'B':
-                GPIOC->ODR ^= GPIO_ODR_7;// Toggle Blue LED
+               switch (action){
+								case '0':
+									GPIOC->BSRR |= GPIO_PIN_7 << 16;break;
+								case '1':
+									GPIOC->BSRR |= GPIO_PIN_7;break;
+								case '2':
+									
+                 while(c<10){ GPIOC->ODR ^= GPIO_ODR_7; HAL_Delay(200);c++;}// Toggle BLUE LED
                 break;
+								default:
+						   	USART3_SendString("Error: Unrecognized action\n");break;
+							}break;
             case 'O':
-                GPIOC->ODR ^= GPIO_ODR_8;// Toggle Orange LED
+               switch (action){
+								case '0':
+									GPIOC->BSRR |= GPIO_PIN_8 << 16;break;
+								case '1':
+									GPIOC->BSRR |= GPIO_PIN_8;break;
+								case '2':
+                  while(c<10){GPIOC->ODR ^= GPIO_ODR_8;HAL_Delay(200);c++;}// Toggle ORANGE LED
                 break;
+								default:
+						   	USART3_SendString("Error: Unrecognized action\n");break;
+							}break;
             case 'G':
-                GPIOC->ODR ^= GPIO_ODR_9;// Toggle Green LED
+               switch (action){
+								case '0':
+									GPIOC->BSRR |= GPIO_PIN_9 << 16;break;
+								case '1':
+									GPIOC->BSRR |= GPIO_PIN_9;break;
+								case '2':
+                 while(c<10){ GPIOC->ODR ^= GPIO_ODR_9;HAL_Delay(200);c++;}// Toggle GREEN LED
                 break;
+								default:
+						   	USART3_SendString("Error: Unrecognized action\n");break;
+							}break;
             // Add more cases for other characters
             default:
 							USART3_SendString("Error: Unrecognized command\n"); // Send an error message if character doesn't match
@@ -155,6 +194,7 @@ int main(void)
   }
   /* USER CODE END 3 */
 }
+	
 
 
 
