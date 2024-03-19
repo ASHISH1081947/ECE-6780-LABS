@@ -59,8 +59,13 @@ void SystemClock_Config(void);
   * @brief  The application entry point.
   * @retval int
   */
+void I2C_WriteReg(uint16_t deviceAdd, uint8_t regAdd, uint8_t data);
+int8_t I2C_ReadReg(uint16_t deviceAdd);
+void I2C_SetRegAdd(uint16_t deviceAdd, uint8_t regAdd);
+
 int main(void)
 {
+    int32_t threshold = 1300;
   /* USER CODE BEGIN 1 */
 
   /* USER CODE END 1 */
@@ -76,11 +81,12 @@ int main(void)
 
   /* Configure the system clock */
   SystemClock_Config();
-	  RCC->AHBENR |= RCC_AHBENR_GPIOBEN;
- 
-  // Enable GPIOC
-  RCC->AHBENR |= RCC_AHBENR_GPIOCEN;
-	GPIO_InitTypeDef initc6789 = {GPIO_PIN_8 | GPIO_PIN_9|GPIO_PIN_6|GPIO_PIN_7, GPIO_MODE_OUTPUT_PP, GPIO_SPEED_FREQ_LOW,GPIO_NOPULL};
+	// Enable GPIOB clock
+	 RCC->AHBENR |= RCC_AHBENR_GPIOBEN;
+  // Enable GPIOC clock
+   RCC->AHBENR |= RCC_AHBENR_GPIOCEN;
+	
+	 GPIO_InitTypeDef initc6789 = {GPIO_PIN_8 | GPIO_PIN_9|GPIO_PIN_6|GPIO_PIN_7, GPIO_MODE_OUTPUT_PP, GPIO_SPEED_FREQ_LOW,GPIO_NOPULL};
 	 HAL_GPIO_Init(GPIOC, &initc6789);
 	
 	 // Configure PB11 in alternate function mode
@@ -101,9 +107,9 @@ int main(void)
     // Configure PB11 as open-drain output
     GPIOB->OTYPER |= GPIO_OTYPER_OT_13;
 
-    // Configure the alternate function for PB13 (assuming it's AF4 for I2C2_SDA, check your datasheet/reference manual)
+    // Configure the alternate function for PB13 it's AF5 for I2C2_SDA
     GPIOB->AFR[1] &= ~GPIO_AFRH_AFSEL13; // Clear the bits
-    GPIOB->AFR[1] |= (5 << GPIO_AFRH_AFSEL13_Pos); // Set AF4 for I2C2_SCL
+    GPIOB->AFR[1] |= (5 << GPIO_AFRH_AFSEL13_Pos); // Set AF5 for I2C2_SCL
  
     // Configure PB14 in general purpose output mode
     GPIOB->MODER &= ~GPIO_MODER_MODER14;  // Clear the bits
@@ -134,141 +140,148 @@ int main(void)
     // Enable the I2C2 peripheral using the PE bit in the CR1 register
     I2C2->CR1 |= I2C_CR1_PE;
 		
-//		// Configure-PC6-and-PC7-as-output
-
-//    GPIOC->MODER |= (GPIO_MODER_MODER6_0 | GPIO_MODER_MODER7_0); // Output mode
-//    GPIOC->OTYPER &= ~(GPIO_OTYPER_OT_6 | GPIO_OTYPER_OT_7); // Push-pull 
-//	  GPIOC->OSPEEDR |= (GPIO_OSPEEDR_OSPEEDR6 | GPIO_OSPEEDR_OSPEEDR7); // High speed 
-//	  GPIOC->PUPDR &= ~(GPIO_PUPDR_PUPDR6 | GPIO_PUPDR_PUPDR7); // No pull-up, no pull-down
-//	
-//  	// Configure-PC8-and-PC9-as-output
-
-//    GPIOC->MODER |= (GPIO_MODER_MODER8_0 | GPIO_MODER_MODER9_0); // Output mode
-//    GPIOC->OTYPER &= ~(GPIO_OTYPER_OT_8 | GPIO_OTYPER_OT_9); // Push-pull 
-//	  GPIOC->OSPEEDR |= (GPIO_OSPEEDR_OSPEEDR8 | GPIO_OSPEEDR_OSPEEDR9); // High speed 
-//	  GPIOC->PUPDR &= ~(GPIO_PUPDR_PUPDR8 | GPIO_PUPDR_PUPDR9); // No pull-up, no pull-down
-	
+		I2C_WriteReg(0x69, 0x20, 0xB);
 		
-		
-		// Step 1: Set transaction parameters in CR2 register
-    I2C2->CR2 = (0x69 << 1) | (1 << 16) | I2C_CR2_START;
-     
-    // Step 2: Wait until either TXIS or NACKF flags are set
-    while (!(I2C2->ISR & (I2C_ISR_TXIS | I2C_ISR_NACKF))) {
-      // Wait
-    }
+		 while (1) {
 
-    // If NACKF flag is set, there might be an error
-    if (I2C2->ISR & I2C_ISR_NACKF) {
-     GPIOC->ODR ^= GPIO_ODR_6;   // Handle error (e.g., print error message or set LED pattern)   
-    }
+    I2C_SetRegAdd(0x69, 0x28);
+    int8_t xlow = I2C_ReadReg(0x69);
+    I2C_SetRegAdd(0x69, 0x29);
+    int8_t xhigh = I2C_ReadReg(0x69);
+    int16_t xd = ((int16_t)xhigh << 8) | (uint8_t)xlow;
 
-    // Step 3: Write the address of the "WHO_AM_I" register into TXDR
-    I2C2->TXDR = 0x0F;
+    I2C_SetRegAdd(0x69, 0x2A);
+    int8_t ylow = I2C_ReadReg(0x69);
+    I2C_SetRegAdd(0x69, 0x2B);
+    int8_t yhigh = I2C_ReadReg(0x69);
+    int16_t yd = ((int16_t)yhigh << 8) | (uint8_t)ylow;
 
-    // Step 4: Wait until TC flag is set
-    while (!(I2C2->ISR & I2C_ISR_TC)) {
-        // Wait
-    }
+    GPIOC->ODR &= ~(GPIO_ODR_7 | GPIO_ODR_6 | GPIO_ODR_8 |
+                    GPIO_ODR_9);  // Reset the ODR bits for LEDs
 
-    // Step 5: Reload CR2 register with read operation parameters and set START bit
-    I2C2->CR2 = (0x69 << 1) | (1 << 16) | I2C_CR2_RD_WRN | I2C_CR2_START;
-
-    // Step 6: Wait until either RXNE or NACKF flags are set
-    while (!(I2C2->ISR & (I2C_ISR_RXNE | I2C_ISR_NACKF))) {
-        // Wait
-    }
-
-    // If NACKF flag is set, there might be an error
-    if (I2C2->ISR & I2C_ISR_NACKF) {
-        GPIOC->ODR ^= GPIO_ODR_8; // Handle error (e.g., print error message or set LED pattern)
-    }
-
-    // Step 7: Wait until TC flag is set
-    while (!(I2C2->ISR & I2C_ISR_TC)) {
-        // Wait
-    }
-
-    // Step 8: Check the contents of RXDR register
-    if (I2C2->RXDR == 0xD3) {
-        // WHO_AM_I register value matches the expected value
-       GPIOC->ODR ^= GPIO_ODR_9;  // Green LED Glows
+    if (yd > threshold) 
+		{
+      GPIOC->ODR |= GPIO_ODR_6;  // Red LED for positive Y
     } 
-		else {
-        // WHO_AM_I register value doesn't match the expected value
-       GPIOC->ODR ^= GPIO_ODR_6;  // RED LED Glows
+		else if (yd < -threshold) 
+		{
+      GPIOC->ODR |= GPIO_ODR_7;  // Blue LED for negative Y
     }
 
-    // Step 9: Set the STOP bit in CR2 register
-    I2C2->CR2 |= I2C_CR2_STOP;
-	
-//    // Step 1: Enable GPIOB and GPIOC in the RCC
-//    RCC->AHBENR |= RCC_AHBENR_GPIOBEN; // Enable clock for GPIOB
-//    RCC->AHBENR |= RCC_AHBENR_GPIOCEN; // Enable clock for GPIOC
-// GPIO_InitTypeDef initc6789 = {GPIO_PIN_8 | GPIO_PIN_9|GPIO_PIN_6|GPIO_PIN_7, GPIO_MODE_OUTPUT_PP, GPIO_SPEED_FREQ_LOW,GPIO_NOPULL};
-//	 HAL_GPIO_Init(GPIOC, &initc6789);
-//    // Step 2: Set PB11 to alternate function mode, open-drain output type, and select I2C2_SDA as its alternate function
-//    GPIOB->MODER |= GPIO_MODER_MODER11_1; // Set PB11 to alternate function mode
-//    GPIOB->OTYPER |= GPIO_OTYPER_OT_11;   // Set PB11 as open-drain output type
-//    GPIOB->AFR[1] |= (1 << ((11 - 8) * 4)); // Select I2C2_SDA as alternate function for PB11
+    if (xd > threshold) 
+		{
+      GPIOC->ODR |= GPIO_ODR_9;  // Green LED for positive X
+    } 
+		else if (xd < -threshold) 
+		{
+      GPIOC->ODR |= GPIO_ODR_8;  // Orange LED for negative X
+    }
 
-//    // Step 3: Set PB13 to alternate function mode, open-drain output type, and select I2C2_SCL as its alternate function
-//    GPIOB->MODER |= GPIO_MODER_MODER13_1; // Set PB13 to alternate function mode
-//    GPIOB->OTYPER |= GPIO_OTYPER_OT_13;   // Set PB13 as open-drain output type
-//    GPIOB->AFR[1] |= (1 << ((13 - 8) * 4)); // Select I2C2_SCL as alternate function for PB13
+    HAL_Delay(500);
+  }	
 
-//    // Step 4: Set PB14 to output mode, push-pull output type, and initialize/set the pin high
-//    GPIOB->MODER |= GPIO_MODER_MODER14_0; // Set PB14 to output mode
-//    GPIOB->OTYPER &= ~GPIO_OTYPER_OT_14;  // Set PB14 as push-pull output type
-//    GPIOB->BSRR |= GPIO_BSRR_BS_14;      // Set PB14 high
-
-//    // Step 5: Set PC0 to output mode, push-pull output type, and initialize/set the pin high
-//    GPIOC->MODER |= GPIO_MODER_MODER0_0; // Set PC0 to output mode
-//    GPIOC->OTYPER &= ~GPIO_OTYPER_OT_0;  // Set PC0 as push-pull output type
-//    GPIOC->BSRR |= GPIO_BSRR_BS_0;      // Set PC0 high
-
-//    // Step 6: Enable the I2C2 peripheral in the RCC
-//    RCC->APB1ENR |= RCC_APB1ENR_I2C2EN; // Enable clock for I2C2
-
-//    // Step 7: Set the parameters in the TIMINGR register to use 100 kHz standard-mode I2C
-//    I2C2->TIMINGR = (uint32_t)0x00303D5B; // Example timing parameters for 100 kHz standard-mode I2C
-
-//    // Step 8: Enable the I2C peripheral using the PE bit in the CR1 register
-//    I2C2->CR1 |= I2C_CR1_PE; // Enable I2C peripheral
-//    // Step 9: Wait until either TXIS or NACKF flags are set
-//	
-//    while (!(I2C2->ISR & (I2C_ISR_TXIS | I2C_ISR_NACKF)));
-
-//    // Step 10: Write the address of the "WHO_AM_I" register into the TXDR
-//    I2C2->TXDR = 0x0F; // Address of the "WHO_AM_I" register
-
-//    // Step 11: Wait until the TC flag is set
-//    while (!(I2C2->ISR & I2C_ISR_TC));
-
-//    // Step 12: Reload the CR2 register with parameters for a read operation
-//    I2C2->CR2 = (0x69 << 1) | (1 << 16) | (1 << 10) | I2C_CR2_START;
-
-//    // Step 13: Wait until either RXNE or NACKF flags are set
-//    while (!(I2C2->ISR & (I2C_ISR_RXNE | I2C_ISR_NACKF)));
-
-//    // Step 14: Wait until the TC flag is set
-//    while (!(I2C2->ISR & I2C_ISR_TC));
-
-//    // Step 15: Check the contents of the RXDR register
-//    //if ((I2C2->RXDR) == 0xD3) {
-//			GPIOC->ODR ^= GPIO_ODR_7; // Toggle BLUE LED
-//			
-// 
-//    //}
-
-//    // Step 16: Set the STOP bit in the CR2 register
-//    I2C2->CR2 |= I2C_CR2_STOP;
-
-//    while (1) {
-//        // Your main loop code goes here
-//    }
 }
 
+void I2C_SetRegAdd(uint16_t deviceAdd, uint8_t regAdd) {
+  I2C2->CR2 = 0;  // clear register
+  // Use SADD[7:1] bit field in CR2 register to set slave address to addr
+  I2C2->CR2 |= (deviceAdd << 1);
+  // Use NBYTES[7:0] bit field to set number of data bytes to be transmitted to
+  // 1
+  I2C2->CR2 |= (0x1 << 16);
+  // Set RD_WRN to WRITE operation - 0 indicates WRITE
+  I2C2->CR2 &= ~(1 << 10);
+  // Set START bit to begin the address frame
+  I2C2->CR2 |= I2C_CR2_START;
+
+  // While TXIS or NACKF flags not set wait
+  while (!(I2C2->ISR & (I2C_ISR_TXIS | I2C_ISR_NACKF))) {
+  }  // getting stuck here on second call to this function!
+  // Once TXIS flag set continue
+
+  // Check if NACK set
+  if (I2C2->ISR & I2C_ISR_NACKF) {
+    // GPIOC->ODR |= GPIO_ODR_6; // RED - I2C not working!
+  }
+
+  // Write data into the TXDR
+  I2C2->TXDR = regAdd;
+
+  // Wait until TC flag set - transfer complete
+  while (!(I2C2->ISR & I2C_ISR_TC)) {
+  }
+}
+
+
+void I2C_WriteReg(uint16_t deviceAdd, uint8_t regAdd, uint8_t data) {
+  I2C2->CR2 = 0;  // clear register
+  // Use SADD[7:1] bit field in CR2 register to set slave address to addr
+  I2C2->CR2 |= (deviceAdd << 1);
+  // Use NBYTES[7:0] bit field to set number of data bytes to be transmitted to
+  // 1
+  I2C2->CR2 |= (0x2 << 16);
+  // Set RD_WRN to WRITE operation - 0 indicates WRITE
+  I2C2->CR2 &= ~(1 << 10);
+  // Set START bit to begin the address frame
+  I2C2->CR2 |= I2C_CR2_START;
+
+  // While TXIS or NACKF flags not set wait
+  while (!(I2C2->ISR & (I2C_ISR_TXIS | I2C_ISR_NACKF))) {
+  }  // getting stuck here on second call to this function!
+  // Once TXIS flag set continue
+
+  // Check if NACK set
+  if (I2C2->ISR & I2C_ISR_NACKF) {
+    // GPIOC->ODR |= GPIO_ODR_6; // RED - I2C not working!
+  }
+
+  // Set reg address
+  I2C2->TXDR = regAdd;
+
+  while (!(I2C2->ISR & I2C_ISR_TXIS)) {
+  }
+
+  // Write data into the TXDR
+  I2C2->TXDR = data;
+
+  // Wait until TC flag set - transfer complete
+  while (!(I2C2->ISR & I2C_ISR_TC)) {
+  }
+}
+
+int8_t I2C_ReadReg(uint16_t deviceAdd) {
+  I2C2->CR2 = 0;  // clear register
+  int8_t data = 0;
+
+  // SADD[7:1] bit field in CR2 register to set slave address to L3GD20
+  I2C2->CR2 |= (deviceAdd << 1);
+  //  NBYTES[7:0] bit field to set number of data bytes to be transmitted to 1
+  
+  I2C2->CR2 |= (0x1 << 16);
+  // RD_WRN to READ operation - 1 indicates READ
+  I2C2->CR2 |= (1 << 10);
+  // START bit to begin the address frame
+  I2C2->CR2 |= I2C_CR2_START;
+
+  // While RXNE or NACKF flags not set wait
+  while (!(I2C2->ISR & (I2C_ISR_RXNE | I2C_ISR_NACKF))) {
+  }
+  // Once RXNE flag set continue
+
+  // Check if NACK set
+  if (I2C2->ISR & I2C_ISR_NACKF) {
+    GPIOC->ODR |= GPIO_ODR_8;  // ORANGE - I2C not working!
+  }
+
+  // Wait for TC flag set
+  while (!(I2C2->ISR & I2C_ISR_TC)) {
+  }
+
+  // Read contents of RXDR register and return data - remember it is 1 byte at a
+  // time
+  data = I2C2->RXDR;
+  return data;
+}
 
   /* USER CODE BEGIN SysInit */
 
