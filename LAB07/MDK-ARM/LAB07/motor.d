@@ -1,4 +1,5 @@
-lab07/main.o: ..\Core\Src\main.c C:\Keil_v5\ARM\ARMCLANG\include\stdio.h \
+lab07/motor.o: ..\Core\Src\motor.c ..\Core\Inc\motor.h \
+  C:\Keil_v5\ARM\ARMCLANG\include\stdio.h \
   C:\Keil_v5\ARM\ARMCLANG\include\stdlib.h \
   ..\Drivers\CMSIS\Device\ST\STM32F0xx\Include\stm32f0xx.h \
   ..\Drivers\CMSIS\Device\ST\STM32F0xx\Include\stm32f072xb.h \
@@ -28,5 +29,4 @@ lab07/main.o: ..\Core\Src\main.c C:\Keil_v5\ARM\ARMCLANG\include\stdio.h \
   ..\Drivers\STM32F0xx_HAL_Driver\Inc\stm32f0xx_hal_i2c.h \
   ..\Drivers\STM32F0xx_HAL_Driver\Inc\stm32f0xx_hal_i2c_ex.h \
   ..\Drivers\STM32F0xx_HAL_Driver\Inc\stm32f0xx_hal_pwr.h \
-  ..\Drivers\STM32F0xx_HAL_Driver\Inc\stm32f0xx_hal_pwr_ex.h \
-  ..\Core\Inc\motor.h
+  ..\Drivers\STM32F0xx_HAL_Driver\Inc\stm32f0xx_hal_pwr_ex.h

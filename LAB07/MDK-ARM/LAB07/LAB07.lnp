@@ -3,6 +3,7 @@
 "lab07\main.o"
 "lab07\stm32f0xx_it.o"
 "lab07\stm32f0xx_hal_msp.o"
+"lab07\motor.o"
 "lab07\stm32f0xx_hal_tim.o"
 "lab07\stm32f0xx_hal_tim_ex.o"
 "lab07\stm32f0xx_hal_rcc.o"
